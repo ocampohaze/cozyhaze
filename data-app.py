@@ -1,19 +1,20 @@
+print("Local version")
 import streamlit as st
 import random
 import pandas as pd
 
 st.set_page_config(page_title="Hero & Farm Adventure", layout="wide")
 
-
-# Mandatory name
-
+# --------------------------
+# Mandatory hero naming
+# --------------------------
 if "hero_name" not in st.session_state:
     st.session_state.hero_name = ""
 
 st.title("🛡️ Hero & Farm Adventure")
 st.caption("Battle monsters, grow crops, complete missions, and upgrade your hero!")
 
-# Ask for hero name 
+# Ask for hero name if not set
 if not st.session_state.hero_name:
     hero_name_input = st.text_input("Enter your hero's name to start playing:")
     if hero_name_input:
@@ -22,9 +23,9 @@ if not st.session_state.hero_name:
         st.warning("You must enter a hero name to start playing!")
         st.stop()
 
-
+# --------------------------
 # Initialize session state
-
+# --------------------------
 if "health" not in st.session_state:
     st.session_state.health = 100
     st.session_state.energy = 50
@@ -48,25 +49,25 @@ if "health" not in st.session_state:
         {"desc": "Reach Level", "type": "level", "target": 3, "progress": st.session_state.level, "reward": 20, "completed": False, "collected": False}
     ]
 
-
-# navigation & settings
-
+# --------------------------
+# Sidebar navigation & settings
+# --------------------------
 page = st.sidebar.radio("Navigation", ["Game", "Missions", "Stats", "Shop", "About"])
 st.sidebar.checkbox("Enable Auto-Harvest", key="auto_harvest")
 monster_difficulty = st.sidebar.slider("Monster Difficulty", 1, 3, 1, help="1=Easy, 2=Medium, 3=Hard")
 
-
+# --------------------------
 # Game Page
-
+# --------------------------
 if page == "Game":
     tab1, tab2 = st.tabs(["⚔️ Battle", "🌾 Farm"])
 
-    # Battle Tab 
+    # ---------- Battle Tab ----------
     with tab1:
         st.header("Battle Arena")
         col_stats, col_actions, col_messages = st.columns([1,1,1])
 
-        # Stats 
+        # Stats Column
         with col_stats:
             st.metric("Health", st.session_state.health)
             st.metric("Energy", st.session_state.energy)
@@ -78,7 +79,7 @@ if page == "Game":
             if st.session_state.achievements:
                 st.write("🏆 Achievements:", ", ".join(st.session_state.achievements))
 
-        # Actions 
+        # Actions Column
         with col_actions:
             if not st.session_state.in_battle:
                 if st.button("Encounter Monster"):
@@ -137,13 +138,13 @@ if page == "Game":
                         if mission["progress"] >= mission["target"]:
                             mission["completed"] = True
 
-        # Messages 
+        # Messages Column
         with col_messages:
             st.subheader("Messages")
             with st.expander("View Battle / Event Log"):
                 st.success(st.session_state.message)
 
-    # Farm Tab ----------
+    # ---------- Farm Tab ----------
     with tab2:
         st.header("Farm Management")
         st.write(f"Crops planted: {st.session_state.crops}")
@@ -203,9 +204,9 @@ if page == "Game":
         st.metric("Player Level", st.session_state.level)
         st.metric("Crops Growth", st.session_state.crop_progress)
 
-
+# --------------------------
 # Missions Tab
-
+# --------------------------
 elif page == "Missions":
     st.header("🎯 Missions")
 
@@ -215,7 +216,7 @@ elif page == "Missions":
             active_mission = mission
             break
 
-    # mission if needed
+    # Generate new mission if needed
     if not active_mission:
         new_missions = [
             {"desc": "Harvest crops", "type": "harvest", "target": random.randint(2,5), "progress": 0, "reward": 10, "completed": False, "collected": False},
@@ -234,7 +235,7 @@ elif page == "Missions":
             st.session_state.gold += active_mission["reward"]
             active_mission["collected"] = True
             st.success(f"Collected {active_mission['reward']} Gold!")
-            #new mission after collection
+            # Generate new mission after collection
             new_missions = [
                 {"desc": "Harvest crops", "type": "harvest", "target": random.randint(2,5), "progress": 0, "reward": 10, "completed": False, "collected": False},
                 {"desc": "Defeat monsters", "type": "battle", "target": random.randint(1,3), "progress": 0, "reward": 15, "completed": False, "collected": False},
@@ -243,9 +244,9 @@ elif page == "Missions":
             ]
             st.session_state.missions.append(random.choice(new_missions))
 
-
+# --------------------------
 # Stats Page
-
+# --------------------------
 elif page == "Stats":
     st.header("📊 Player Stats")
     data = {
@@ -259,9 +260,9 @@ elif page == "Stats":
     if collected_missions:
         st.write("🎯 Completed Missions:", ", ".join(collected_missions))
 
-
+# --------------------------
 # Shop Page
-
+# --------------------------
 elif page == "Shop":
     st.header("🛒 Shop")
     st.write("Upgrade your hero using Gold!")
@@ -302,9 +303,9 @@ elif page == "Shop":
     st.metric("Health", st.session_state.health)
     st.metric("Energy", st.session_state.energy)
 
-
+# --------------------------
 # About Page
-
+# --------------------------
 elif page == "About":
     st.header("About This Game")
     st.write(f"""
@@ -335,3 +336,4 @@ Students, casual gamers, and anyone who enjoys interactive text-based games.
 **Goal:**  
 Maximize your hero’s level, stats, and farm productivity while surviving battles and completing missions indefinitely.
 """)
+print ("Remote version") (Updated content)
