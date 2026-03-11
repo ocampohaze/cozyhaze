@@ -2,6 +2,7 @@ print("Local version")
 import streamlit as st
 import random
 import pandas as pd
+import time
 
 st.set_page_config(page_title="Hero & Farm Adventure", layout="wide")
 
@@ -47,9 +48,9 @@ if "health" not in st.session_state:
         {"desc": "Reach Level", "type": "level", "target": 3, "progress": st.session_state.level, "reward": 20, "completed": False, "collected": False}
     ]
 
-# Clamp stats to prevent negatives
+# Clamp stats to prevent negatives and max health
 def clamp():
-    st.session_state.health = max(0, st.session_state.health)
+    st.session_state.health = max(0, min(st.session_state.health, 100))
     st.session_state.energy = max(0, st.session_state.energy)
     st.session_state.gold = max(0, st.session_state.gold)
     st.session_state.monster_health = max(0, st.session_state.monster_health)
@@ -57,16 +58,28 @@ def clamp():
     st.session_state.crop_progress = max(0, st.session_state.crop_progress)
     st.session_state.crop_timer = max(0, st.session_state.crop_timer)
 
-# Sidebar
+# ---------------- Sidebar ----------------
 page = st.sidebar.radio("Navigation", ["Game", "Missions", "Stats", "Shop", "About"])
 st.sidebar.checkbox("Enable Auto-Harvest", key="auto_harvest")
 monster_difficulty = st.sidebar.slider("Monster Difficulty", 1, 3, 1)
 
-# ---------------- GAME ----------------
+# ---------------- Game Tab ----------------
 if page == "Game":
     tab1, tab2 = st.tabs(["⚔️ Battle", "🌾 Farm"])
 
-    # Game Over notification
+    # Passive +10 Health per minute
+    if "last_health_time" not in st.session_state:
+        st.session_state.last_health_time = time.time()
+    current_time = time.time()
+    elapsed_minutes = int((current_time - st.session_state.last_health_time) / 60)
+    if elapsed_minutes > 0:
+        health_gain = 10 * elapsed_minutes
+        st.session_state.health += health_gain
+        st.session_state.message += f" ⏱️ Passive +{health_gain} Health restored ({elapsed_minutes} min)"
+        st.session_state.last_health_time = current_time
+    clamp()
+
+    # Game Over
     if st.session_state.health <= 0:
         st.error("💀 GAME OVER! Your hero has been defeated.")
         if st.button("Restart Adventure"):
@@ -77,7 +90,6 @@ if page == "Game":
         with tab1:
             st.header("Battle Arena")
             col_stats, col_actions, col_messages = st.columns([1,1,1])
-
             with col_stats:
                 st.metric("Health", st.session_state.health)
                 st.metric("Energy", st.session_state.energy)
@@ -88,7 +100,6 @@ if page == "Game":
                 st.metric("Defense", st.session_state.defense)
                 if st.session_state.achievements:
                     st.write("🏆 Achievements:", ", ".join(st.session_state.achievements))
-
             with col_actions:
                 if not st.session_state.in_battle:
                     if st.button("Encounter Monster"):
@@ -98,34 +109,28 @@ if page == "Game":
                         st.session_state.monster_health = base_hp[st.session_state.current_monster] * monster_difficulty
                         st.session_state.in_battle = True
                         st.session_state.message = f"A wild {st.session_state.current_monster} appears! HP: {st.session_state.monster_health}"
-
                 if st.session_state.in_battle:
                     st.subheader(f"{st.session_state.current_monster} HP: {st.session_state.monster_health}")
                     st.progress(st.session_state.monster_health/150)
-
                     if st.button("Attack"):
                         damage = random.randint(5,15) + st.session_state.strength
                         st.session_state.monster_health -= damage
                         st.session_state.energy -= 5
                         st.session_state.message = f"You dealt {damage} damage!"
-
                     if st.button("Defend"):
                         heal = random.randint(3,8) + st.session_state.defense
                         st.session_state.health += heal
                         st.session_state.message = f"You defended and healed {heal} HP!"
-
                     if st.button("Run"):
                         st.session_state.in_battle = False
                         st.session_state.message = "You ran away!"
-
                     clamp()
-
                     if st.session_state.monster_health > 0:
                         monster_damage = random.randint(5,12) * monster_difficulty
                         st.session_state.health -= monster_damage
                         st.session_state.message += f" Monster dealt {monster_damage} damage!"
                     else:
-                        gold_earned = random.randint(5,15) * monster_difficulty
+                        gold_earned = random.randint(30,50) * monster_difficulty
                         exp_earned = random.randint(5,10) * monster_difficulty
                         st.session_state.gold += gold_earned
                         st.session_state.exp += exp_earned
@@ -133,22 +138,19 @@ if page == "Game":
                         st.session_state.in_battle = False
                         if "First Kill" not in st.session_state.achievements:
                             st.session_state.achievements.append("First Kill")
-
                     clamp()
                     if st.session_state.health <= 0:
                         st.experimental_rerun()
-
                 if st.session_state.exp >= st.session_state.level * 20:
                     st.session_state.exp -= st.session_state.level * 20
                     st.session_state.level += 1
                     st.session_state.message += f" Level Up! You are now level {st.session_state.level}"
                     st.session_state.health += 10
                     st.session_state.energy += 10
-
-            with col_messages:
-                st.subheader("Messages")
-                with st.expander("View Battle / Event Log"):
-                    st.success(st.session_state.message)
+        with col_messages:
+            st.subheader("Messages")
+            with st.expander("View Battle / Event Log"):
+                st.success(st.session_state.message)
 
         # Farm Tab
         with tab2:
@@ -156,7 +158,6 @@ if page == "Game":
             st.write(f"Crops planted: {st.session_state.crops}")
             st.progress(st.session_state.crop_progress/10)
             st.write(f"Crop Timer: {st.session_state.crop_timer}/10")
-
             col1,col2 = st.columns(2)
             with col1:
                 if st.button("Plant Crops (5 Gold each)"):
@@ -168,11 +169,10 @@ if page == "Game":
                         st.session_state.message = "You planted a crop!"
                     else:
                         st.session_state.message = "Not enough Gold!"
-
             with col2:
                 if st.button("Harvest Crops"):
                     if st.session_state.crop_progress >= 10 or st.session_state.auto_harvest:
-                        gold_earned = st.session_state.crops * random.randint(2,5)
+                        gold_earned = st.session_state.crops * random.randint(10,20)
                         st.session_state.gold += gold_earned
                         st.session_state.message = f"You harvested {st.session_state.crops} crops and earned {gold_earned} Gold!"
                         for mission in st.session_state.missions:
@@ -187,7 +187,6 @@ if page == "Game":
                             st.session_state.achievements.append("First Harvest")
                     else:
                         st.session_state.message = "Crops are not ready yet!"
-
             if st.button("Wait/Pass Time"):
                 if st.session_state.crops > 0:
                     growth = random.randint(1,3)
@@ -202,13 +201,10 @@ if page == "Game":
                         st.session_state.crops -= lost_crops
                         st.session_state.gold -= lost_gold
                         st.warning(f"⚠️ Monster Raid! You lost {lost_crops} crops and {lost_gold} Gold!")
-
                 st.session_state.energy += 5
                 st.session_state.health += 2
-
-                # Auto-Harvest
-                if st.session_state.auto_harvest and st.session_state.crop_progress >=10:
-                    gold_earned = st.session_state.crops * random.randint(2,5)
+                if st.session_state.auto_harvest and st.session_state.crop_progress>=10:
+                    gold_earned = st.session_state.crops * random.randint(10,20)
                     st.session_state.gold += gold_earned
                     st.session_state.message += f" Auto-Harvested {st.session_state.crops} crops for {gold_earned} Gold!"
                     for mission in st.session_state.missions:
@@ -219,7 +215,6 @@ if page == "Game":
                     st.session_state.crops = 0
                     st.session_state.crop_progress = 0
                     st.session_state.crop_timer = 0
-
             clamp()
             st.success(st.session_state.message)
             st.metric("Player Level",st.session_state.level)
@@ -247,9 +242,17 @@ elif page == "Missions":
     st.write(f"Current Mission: {active_mission['desc']} — {status}")
     if active_mission["completed"] and not active_mission["collected"]:
         if st.button("Collect Reward"):
-            st.session_state.gold += active_mission["reward"]
+            if active_mission["type"]=="harvest":
+                reward = random.randint(10,20) * active_mission["target"]
+            elif active_mission["type"]=="battle":
+                reward = random.randint(30,50) * monster_difficulty
+            elif active_mission["type"]=="gold":
+                reward = random.randint(5,15) * active_mission["target"]
+            else:
+                reward = active_mission["reward"]
+            st.session_state.gold += reward
             active_mission["collected"] = True
-            st.success(f"Collected {active_mission['reward']} Gold!")
+            st.success(f"Collected {reward} Gold!")
             new_missions = [
                 {"desc": "Harvest crops", "type": "harvest", "target": random.randint(2,5), "progress": 0, "reward": 10, "completed": False, "collected": False},
                 {"desc": "Defeat monsters", "type": "battle", "target": random.randint(1,3), "progress": 0, "reward": 15, "completed": False, "collected": False},
