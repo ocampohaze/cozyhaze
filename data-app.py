@@ -336,4 +336,4 @@ Students, casual gamers, and anyone who enjoys interactive text-based games.
 **Goal:**  
 Maximize your hero’s level, stats, and farm productivity while surviving battles and completing missions indefinitely.
 """)
-print ("Remote version") (Updated content)
+print ("Remote version")
