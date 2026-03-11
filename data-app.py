@@ -41,11 +41,14 @@ if "health" not in st.session_state:
     st.session_state.defense = 3
     st.session_state.auto_harvest = False
     st.session_state.current_monster = None
+    st.session_state.last_health_time = time.time()
     st.session_state.missions = [
-        {"desc": "Harvest crops", "type": "harvest", "target": 3, "progress": 0, "reward": 10, "completed": False, "collected": False},
-        {"desc": "Defeat monsters", "type": "battle", "target": 2, "progress": 0, "reward": 15, "completed": False, "collected": False},
-        {"desc": "Earn Gold", "type": "gold", "target": 20, "progress": 0, "reward": 5, "completed": False, "collected": False},
-        {"desc": "Reach Level", "type": "level", "target": 3, "progress": st.session_state.level, "reward": 20, "completed": False, "collected": False}
+        {"desc": "Harvest 3 crops", "type": "harvest", "target": 3, "progress": 0, "reward": 0, "completed": False, "collected": False},
+        {"desc": "Defeat 2 monsters", "type": "battle", "target": 2, "progress": 0, "reward": 0, "completed": False, "collected": False},
+        {"desc": "Earn 20 Gold", "type": "gold", "target": 20, "progress": 0, "reward": 0, "completed": False, "collected": False},
+        {"desc": "Reach Level 3", "type": "level", "target": 3, "progress": 1, "reward": 0, "completed": False, "collected": False},
+        {"desc": "Harvest 5 crops", "type": "harvest", "target": 5, "progress": 0, "reward": 0, "completed": False, "collected": False},
+        {"desc": "Defeat 3 monsters", "type": "battle", "target": 3, "progress": 0, "reward": 0, "completed": False, "collected": False}
     ]
 
 # Clamp stats to prevent negatives and max health
@@ -68,8 +71,6 @@ if page == "Game":
     tab1, tab2 = st.tabs(["⚔️ Battle", "🌾 Farm"])
 
     # Passive +10 Health per minute
-    if "last_health_time" not in st.session_state:
-        st.session_state.last_health_time = time.time()
     current_time = time.time()
     elapsed_minutes = int((current_time - st.session_state.last_health_time) / 60)
     if elapsed_minutes > 0:
@@ -130,8 +131,8 @@ if page == "Game":
                         st.session_state.health -= monster_damage
                         st.session_state.message += f" Monster dealt {monster_damage} damage!"
                     else:
-                        gold_earned = random.randint(30,50) * monster_difficulty
-                        exp_earned = random.randint(5,10) * monster_difficulty
+                        gold_earned = random.randint(10,30)
+                        exp_earned = random.randint(5,10)
                         st.session_state.gold += gold_earned
                         st.session_state.exp += exp_earned
                         st.session_state.message += f" Monster defeated! +{gold_earned} Gold, +{exp_earned} EXP"
@@ -172,7 +173,7 @@ if page == "Game":
             with col2:
                 if st.button("Harvest Crops"):
                     if st.session_state.crop_progress >= 10 or st.session_state.auto_harvest:
-                        gold_earned = st.session_state.crops * random.randint(10,20)
+                        gold_earned = st.session_state.crops * random.randint(10,30)
                         st.session_state.gold += gold_earned
                         st.session_state.message = f"You harvested {st.session_state.crops} crops and earned {gold_earned} Gold!"
                         for mission in st.session_state.missions:
@@ -204,7 +205,7 @@ if page == "Game":
                 st.session_state.energy += 5
                 st.session_state.health += 2
                 if st.session_state.auto_harvest and st.session_state.crop_progress>=10:
-                    gold_earned = st.session_state.crops * random.randint(10,20)
+                    gold_earned = st.session_state.crops * random.randint(10,30)
                     st.session_state.gold += gold_earned
                     st.session_state.message += f" Auto-Harvested {st.session_state.crops} crops for {gold_earned} Gold!"
                     for mission in st.session_state.missions:
@@ -223,51 +224,33 @@ if page == "Game":
 # ----------------- Missions -----------------
 elif page == "Missions":
     st.header("🎯 Missions")
-    active_mission = None
-    for mission in st.session_state.missions:
-        if not mission["completed"] or (mission["completed"] and not mission["collected"]):
-            active_mission = mission
-            break
-    if not active_mission:
+    # Select first available mission
+    available_missions = [m for m in st.session_state.missions if not m["completed"] or (m["completed"] and not m["collected"])]
+    if not available_missions:
+        # Generate new missions
         new_missions = [
-            {"desc": "Harvest crops", "type": "harvest", "target": random.randint(2,5), "progress": 0, "reward": 10, "completed": False, "collected": False},
-            {"desc": "Defeat monsters", "type": "battle", "target": random.randint(1,3), "progress": 0, "reward": 15, "completed": False, "collected": False},
-            {"desc": "Earn Gold", "type": "gold", "target": random.randint(10,30), "progress": 0, "reward": 5, "completed": False, "collected": False},
-            {"desc": "Reach Level X", "type": "level", "target": st.session_state.level + random.randint(1,3), "progress": st.session_state.level, "reward": 20, "completed": False, "collected": False}
+            {"desc": "Harvest crops", "type": "harvest", "target": random.randint(2,5), "progress":0, "reward":0,"completed":False,"collected":False},
+            {"desc": "Defeat monsters", "type": "battle", "target": random.randint(1,3), "progress":0, "reward":0,"completed":False,"collected":False},
+            {"desc": "Earn Gold", "type": "gold", "target": random.randint(10,30), "progress":0, "reward":0,"completed":False,"collected":False},
+            {"desc": "Reach Level X", "type": "level", "target": st.session_state.level + random.randint(1,3), "progress": st.session_state.level, "reward":0,"completed":False,"collected":False}
         ]
-        new_mission = random.choice(new_missions)
-        st.session_state.missions.append(new_mission)
-        active_mission = new_mission
+        st.session_state.missions.append(random.choice(new_missions))
+        available_missions = [st.session_state.missions[-1]]
+    active_mission = available_missions[0]
     status = "✅ Completed" if active_mission["completed"] else f"Progress: {active_mission['progress']}/{active_mission['target']}"
     st.write(f"Current Mission: {active_mission['desc']} — {status}")
     if active_mission["completed"] and not active_mission["collected"]:
         if st.button("Collect Reward"):
-            if active_mission["type"]=="harvest":
-                reward = random.randint(10,20) * active_mission["target"]
-            elif active_mission["type"]=="battle":
-                reward = random.randint(30,50) * monster_difficulty
-            elif active_mission["type"]=="gold":
-                reward = random.randint(5,15) * active_mission["target"]
-            else:
-                reward = active_mission["reward"]
+            reward = random.randint(10,30)
             st.session_state.gold += reward
             active_mission["collected"] = True
             st.success(f"Collected {reward} Gold!")
-            new_missions = [
-                {"desc": "Harvest crops", "type": "harvest", "target": random.randint(2,5), "progress": 0, "reward": 10, "completed": False, "collected": False},
-                {"desc": "Defeat monsters", "type": "battle", "target": random.randint(1,3), "progress": 0, "reward": 15, "completed": False, "collected": False},
-                {"desc": "Earn Gold", "type": "gold", "target": random.randint(10,30), "progress": 0, "reward": 5, "completed": False, "collected": False},
-                {"desc": "Reach Level X", "type": "level", "target": st.session_state.level + random.randint(1,3), "progress": st.session_state.level, "reward": 20, "completed": False, "collected": False}
-            ]
-            st.session_state.missions.append(random.choice(new_missions))
 
 # ----------------- Stats -----------------
 elif page == "Stats":
     st.header("📊 Player Stats")
-    data = {
-        "Stat":["Health","Energy","Gold","EXP","Level","Strength","Defense","Crops","Crop Growth"],
-        "Value":[st.session_state.health,st.session_state.energy,st.session_state.gold,st.session_state.exp,st.session_state.level,st.session_state.strength,st.session_state.defense,st.session_state.crops,st.session_state.crop_progress]
-    }
+    data = {"Stat":["Health","Energy","Gold","EXP","Level","Strength","Defense","Crops","Crop Growth"],
+            "Value":[st.session_state.health,st.session_state.energy,st.session_state.gold,st.session_state.exp,st.session_state.level,st.session_state.strength,st.session_state.defense,st.session_state.crops,st.session_state.crop_progress]}
     st.dataframe(pd.DataFrame(data))
     if st.session_state.achievements:
         st.write("🏆 Achievements:", ", ".join(st.session_state.achievements))
@@ -344,5 +327,4 @@ Students, casual gamers, and anyone who enjoys interactive text-based games.
 **Goal:**  
 Maximize your hero’s level, stats, and farm productivity while surviving battles and completing missions indefinitely.
 """)
-
 print("Remote version")
